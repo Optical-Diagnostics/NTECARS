@@ -1,0 +1,5 @@
+project_path = joinpath(@__DIR__, "..", "..","..")
+const ISOTOPOLOGUE_METADATA_PATH           = joinpath(project_path,"data","MoleculeDatabase","CO2","isotopologue_metadata.toml")
+const ROVIBRATIONAL_CONSTANTS_PATH         = joinpath(project_path,"data","MoleculeDatabase","CO2","rovibrational_constants_teffo.toml")
+const VIBSTATE_SPECIFIC_ROT_CONSTANTS_PATH = joinpath(project_path,"data","MoleculeDatabase","CO2","vibstate_specific_rotational_constants.toml")
+const CO2_LINEWIDTH_PARAMETERS_PATH        = joinpath(project_path,"data","MoleculeDatabase","CO2","linewidth_parameters.toml")

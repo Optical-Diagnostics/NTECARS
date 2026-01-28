@@ -1,0 +1,105 @@
+# from Tashkun, J. Quant. Spectrosc. Radiat. ¹ransfer Vol. 60, No. 5, pp. 785—801, 1998
+# any undefined quantity or index-value pair missing will default to zero
+
+[diagonal_terms]
+x_ll     = -1.046 
+gamma_ll = 2.116e-6
+B_e      = 0.3916292 
+D_e      = 1.311e-7
+eta_ll   = 0.0
+H_e      = 2.40e-14
+
+[diagonal_terms.omega_i]
+"1" = 1353.612 
+"2" = 672.871 
+"3" = 2396.265 
+
+[diagonal_terms.x_ij]
+"11" = -2.881 
+"12" = -5.300 
+"13" = -19.164 
+"22" = 1.635 
+"23" = -12.549 
+"33" = -12.550
+
+[diagonal_terms.y_ill]
+"1" = 0.067e-2
+"2" = 0.739e-2 
+"3" = 3.017e-2 
+
+[diagonal_terms.y_ijk]
+"111" = -0.39e-2 
+"112" = -3.60e-2 
+"113" = -9.08e-2
+"123" = 9.28e-2
+"122" = 0.63e-2
+"133" = 6.27e-2
+"222" = -0.79e-2
+"223" = -2.341e-2
+"233" = 1.471e-2
+"333" = 0.532e-2
+
+[diagonal_terms.z_ijkm]
+
+[diagonal_terms.z_ijll]
+
+[diagonal_terms.alpha_i]        
+"1" = 1.191e-3
+"2" = -0.741e-3
+"3" = 3.099e-3
+
+[diagonal_terms.gamma_ij] 
+"11" = -0.78e-6 
+"12" = -6.27e-6  
+"13" = -13.21e-6 
+"22" = -6.33e-6 
+"23" = 12.66e-6 
+"33" = 1.45e-6 
+
+[diagonal_terms.epsilon_ijk]
+
+[diagonal_terms.epsilon_ill]
+
+[diagonal_terms.beta_i] 
+"1" = -0.267e-9       
+"2" = 2.360e-9
+"3" = -0.168e-9
+
+[diagonal_terms.eta_ij]   
+
+[Fermi_interaction_terms]
+F_e  = -26.604 
+F_J  = 1.245e-4
+FeIV = 0.862e-2
+F_JJ = 0.0
+F1IV = 0.0
+F2IV = 0.0
+F3IV = 0.0
+FJIV = 0.0
+
+[Fermi_interaction_terms.F_i]
+"1" = 0.264 
+"2" = 0.326 
+"3" = 0.135 
+
+[Fermi_interaction_terms.F_ij]      
+
+[l_type_doubling]
+L_e = -1.531e-4
+L_J = 1.787e-10
+
+[l_type_doubling.L_i]  
+"1" = 1.74e-6
+"2" = -0.98e-6
+"3" = 0.57e-6 
+
+[l_type_doubling.L_ij]  
+
+[coriolis_interaction]
+C_e = -3.076e-2
+C_J = -4.8e-8
+
+[coriolis_interaction.C_i]
+"1" = -10.0e-4
+"2" = -9.4e-4
+"3" = -0.24e-4

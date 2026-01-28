@@ -1,0 +1,9 @@
+# Dunham coeffcients from table I in J Kuhfeld et al 2021 J. Phys. D: Appl. Phys. 54 305204
+[Dunham_coefficients]
+Yij = [
+    [0,           1.998241,    -5.76e-6,     0        ],
+    [2358.518,    -0.017303,   -8.32e-9,     -2.58e-13],
+    [-14.2935,    -3.24e-5,    -4.20e-10,    0        ],
+    [-4.98e-3,    0,           0,            0        ],
+    [-1.22e-4,    0,           0,            0        ],
+] 

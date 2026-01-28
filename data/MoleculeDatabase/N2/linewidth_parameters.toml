@@ -1,0 +1,8 @@
+# Definitions according to "Studies of nitrogen self-broadening at high temperature with inverse Raman spectroscopy" - Rahn, palmer 1986
+# alpha (K/Pa), beta, delta, n, T0
+# alpha is usually given in K/atm. here it is divided by 101325 to convert to Pa
+
+[MEGL_constants]
+"N2"  = [0.023, 1.67, 1.26, 1.346, 295] # Studies of nitrogen self-broadening at high temperature with inverse Raman spectroscopy
+"CO2" = [0.0363, 1.75, 1.47, 1.42, 295] # Collisional line broadening and line shifting in N2-CO2 mixture studied by inverse Raman spectroscopy
+
