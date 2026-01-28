@@ -1,6 +1,9 @@
 using NTECARS
 using Test
+using CSV
+using DataFrames
 
-@testset "NTECARS.jl" begin
-    # Write your tests here.
+@testset "CO2" begin
+    include("CO2.jl")
+    include("N2.jl")
 end

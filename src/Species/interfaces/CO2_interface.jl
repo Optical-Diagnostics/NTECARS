@@ -1,4 +1,3 @@
-
 mutable struct CO2Species  <: CARSSpecies
     molar_fraction            ::Float64
     χ_non_resonant            ::Float64

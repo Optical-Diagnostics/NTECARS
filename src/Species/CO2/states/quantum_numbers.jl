@@ -21,7 +21,7 @@ struct QuantumNumbers <: AbstractQuantumNumbers
     v₃ ::Int16 # quantum number of asymmetric stretch mode
     r  ::Int16 # ranking number in polyad. r==1 has highest energy.
     J  ::Int16 # rotational quantum number
-    C  ::Int16 # paraity: 1 for "e" and 2 for "f"
+    C  ::Int16 # parity: 1 for "e" and 2 for "f"
 end
 
 struct VibrationalQuantumNumbers <: AbstractQuantumNumbers
@@ -37,11 +37,14 @@ function VibrationalQuantumNumbers(qn::QuantumNumbers)
     return VibrationalQuantumNumbers(qn.v₁, qn.v₂, qn.l₂, qn.v₃, qn.r)
 end
 
+function QuantumNumbers(v₁, v₂, l₂, v₃, r, J)
+    C = CO2_parity(J, l₂, v₃)
+    return QuantumNumbers(v₁, v₂, l₂, v₃, r, J, C)
+end
 function CO2_parity(J, l₂, v₃)
     # parity that an allowd state has at these quantum numbers
     return (J+l₂+v₃) % 2 == 0 ? 1 : 2
 end
-
 
 Base.show(io::IO, qn::VibrationalQuantumNumbers)        = print(io, "($(qn.v₁),$(qn.v₂),$(qn.l₂),$(qn.v₃),$(qn.r))")
 Base.show(io::IO, qn::QuantumNumbers)                   = print(io, "($(qn.v₁),$(qn.v₂),$(qn.l₂),$(qn.v₃),$(qn.r), J=$(qn.J), C=$(qn.C))")
