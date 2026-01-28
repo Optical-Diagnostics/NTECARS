@@ -4,7 +4,7 @@ The NTECARS.jl code is a flexible tool for the calculation and fitting CARS spec
 # Installation
 ```julia
 using Pkg
-Pkg.add("https://github.com/ChristianABusch/NTECARS")
+Pkg.add("https://github.com/Optical-Diagnostics/NTECARS")
 ```
 
 # Minimal example for CARS spectrum
