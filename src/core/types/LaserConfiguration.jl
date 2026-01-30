@@ -40,7 +40,7 @@ lasers = LaserConfiguration(
 )
 ```
 """
-struct LaserConfiguration
+mutable struct LaserConfiguration
     ν_1::Float64
     ν_2::Float64
     profile_1::Union{DeltaProfile, Spectrum} 

@@ -13,7 +13,7 @@ The profiles should be centered around 0 but do not have to be symmetric.
 InstrumentConfiguration(profile = Gaussian(0.2/2.35))
 ```
 """
-struct InstrumentConfiguration
+mutable struct InstrumentConfiguration
     profile::Union{DeltaProfile,Spectrum}
 
     function InstrumentConfiguration(;profile::Union{DeltaProfile,Spectrum} = DeltaProfile())
