@@ -12,6 +12,7 @@ struct that contains all information for the calculation of a CARS spectrum.
   determined from the linewidths of the given `CARSSpecies` at the temperature and pressure given in `GasConditions`
 - `vertical_shift::Float64` A vertical offset that is added to the spectrum at the end. 
   The spectra are normalized to the maximum so ∈ [0,1]
+- `wavelength_shift::Float64`: Units of meters. Shifts the anti-Stokes wavelength to `λ_aS + wavelength_shift`. 
 """
 mutable struct CARSSimulator
     species   ::Vector{CARSSpecies}
@@ -20,6 +21,7 @@ mutable struct CARSSimulator
     instrument::InstrumentConfiguration
     grid      ::Union{UniformGrid, AdaptiveGrid}
     vertical_shift::Float64
+    wavelength_shift::Float64
 end
 
 function CARSSimulator(;
@@ -28,7 +30,8 @@ function CARSSimulator(;
     lasers    ::LaserConfiguration,
     instrument::InstrumentConfiguration,
     grid_type ::Symbol = :adaptive,
-    vertical_shift::Float64 = 0.0
+    vertical_shift::Float64 = 0.0,
+    wavelength_shift::Float64 = 0.0
     ) where {T<:CARSSpecies}
 
     if grid_type == :adaptive
@@ -37,5 +40,5 @@ function CARSSimulator(;
         grid = UniformGrid(species = species, lasers = lasers, conditions = conditions)
     end
 
-    CARSSimulator(species, conditions, lasers, instrument, grid, vertical_shift)
+    CARSSimulator(species, conditions, lasers, instrument, grid, vertical_shift, wavelength_shift)
 end

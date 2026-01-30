@@ -1,3 +1,4 @@
+using Revise
 using NTECARS
 using CairoMakie
 CairoMakie.activate!()
@@ -34,7 +35,7 @@ sim  = CARSSimulator(
     species    = [CO2_species, N2_species], 
     conditions = conditions, 
     lasers     = lasers, 
-    instrument = instrument,
+    instrument = instrument
 )
 
 ###############################################################

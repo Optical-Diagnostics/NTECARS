@@ -15,6 +15,7 @@ function simulate_spectrum(sim::CARSSimulator, ν_output = nothing)
 
     χ².I = intensities(χ², normalization = :maximum)
     χ².I .+= sim.vertical_shift
+    χ².ν .= wavelength_to_wavenumber(wavelengths(χ²) .+ sim.wavelength_shift)
     return χ²
 end
 
