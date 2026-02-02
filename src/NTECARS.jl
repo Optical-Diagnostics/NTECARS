@@ -5,6 +5,7 @@ module NTECARS
     using LoopVectorization
     using Unitful, PhysicalConstants.CODATA2018
     using CairoMakie
+    using Optimization, OptimizationIpopt, OptimizationMOI, Ipopt, FiniteDiff, NonlinearSolve
 
     include(joinpath("core", "SpectralConverision", "spectral_conversion.jl"))
 

@@ -9,13 +9,14 @@ function simulate_spectrum(sim::CARSSimulator, ν_output = nothing)
         χ² = convolute(χ², sim.instrument.profile)
     end
 
+    χ².ν = wavelength_to_wavenumber(wavelengths(χ²) .+ sim.wavelength_shift)
+
     if !isnothing(ν_output)
         χ² = average_to_detector_pixels(χ², ν_output)
     end
 
     χ².I = intensities(χ², normalization = :maximum)
     χ².I .+= sim.vertical_shift
-    χ².ν .= wavelength_to_wavenumber(wavelengths(χ²) .+ sim.wavelength_shift)
     return χ²
 end
 

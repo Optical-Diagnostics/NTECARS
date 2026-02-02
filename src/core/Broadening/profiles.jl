@@ -15,11 +15,16 @@ end
 #               Broanening profiles
 ##################################################
 function power_voigt_spectrum(σ, γ, n, μ=0.0)
-    # find where profile decreases to less than 1% of the maximum
-    ν_max = find_zero(x -> voigt_super(x, σ, γ, n) - 0.0001, (0.0, 1000.0))
+    threshold = 0.0001
+    if voigt_super(1000.0, σ, γ, n) < threshold
+        # find where profile decreases to less than 0.01% of the maximum
+        ν_max = find_zero(x -> voigt_super(x, σ, γ, n) - 0.0001, (0.0, 1000.0))
+    else
+        ν_max = 1000
+    end
 
     # calculate spectrum in the determined range
-    ν     = collect(LinRange(-ν_max, ν_max, 100))
+    ν     = collect(LinRange(-ν_max, ν_max, 300))
     I     = voigt_super.(ν, σ, γ, n)
     return Spectrum(ν .+ μ, I .- minimum(I), :wavenumber)
 end

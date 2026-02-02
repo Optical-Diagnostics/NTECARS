@@ -3,7 +3,7 @@ Bins a finely resolved spectrum defined at wavelengths ν with intensity I to th
 """
 function average_to_detector_pixels(S::Spectrum, ν_pixel)
     itp = Interpolations.LinearInterpolation(wavenumbers(S), intensities(S), extrapolation_bc=Line())
-    S_pixel = Spectrum(ν_pixel, itp.(ν_pixel), :wavenumber)
+    S_pixel = Spectrum(copy(ν_pixel), itp.(ν_pixel), :wavenumber)
     
     Δν = abs(ν_pixel[2] - ν_pixel[1])
     for i in eachindex(ν_pixel)

@@ -1,4 +1,3 @@
-using Optimization, OptimizationIpopt, OptimizationMOI, Ipopt, FiniteDiff
 
 struct FitResult
     # results
@@ -15,7 +14,8 @@ end
 
 """
     fit_spectrum(; spec_exp, sim, parameter_update_function!, initial, lower, upper, 
-        intensity_eval_function = x -> abs.(x ./ maximum(x)).^(1/2) , parameter_scaling_factor = initial)
+        intensity_eval_function = x -> abs.(x ./ maximum(x)).^(1/2) , parameter_scaling_factor = initial,
+        solver::Symbol = :LM, maxiters= 200)
 
 Fits the the model to a measured spectrum.
 
@@ -30,6 +30,8 @@ Fits the the model to a measured spectrum.
 - `intensity_eval_function::Function = x -> abs.(x ./ maximum(x)).^(1/2),` a function that is applied to 
   both the simulated and experimental spectrum before calculating the residuals. The default represents
   a fitting of the normalized sqaure-root of the CARS-intensity.
+- `solver::Symbol`: Options are `:LM` for LevenbergMarquardt and `:IPOPT` for the IPOPT solver.
+- `maxiters::Int64`: Maximum number of iterations
 
 # return 
 - `FitResult`: contains parameters, spectra, uncertainties etc...
@@ -65,42 +67,78 @@ function fit_spectrum(;
     lower::Vector{Float64}, 
     upper::Vector{Float64}, 
     intensity_eval_function::Function = x -> abs.(x ./ maximum(x)).^(1/2),
-    parameter_scaling_factor = initial
+    parameter_scaling_factors = initial,
+    solver::Symbol = :IPOPT,
+    maxiters::Int64 = 200
 )
-
-    function scaled_parameter_update_function!(sim, param)
-        return parameter_update_function!(sim, param.*parameter_scaling_factor)
-    end
-
-    function lsq_error(param)
-        r = residuals(sim_fit, param, spec_exp, intensity_eval_function, scaled_parameter_update_function!)
-        return sum((r) .^ 2) 
-    end
-
     # copy to not modify the users sim struct
     sim_fit = deepcopy(sim)
+    auxiliary_parameters = []
 
-    # scale the parameters and boundaries to the order of unity for the solver
-    ub = upper ./ parameter_scaling_factor
-    lb = lower ./ parameter_scaling_factor
-    x0 = initial ./ parameter_scaling_factor
-    p  = [] 
+    if solver == :LM
+        #levenberg_parameter_transform(u) = @. (upper-lower)/2 * tanh(u) + (lower+upper)/2   
+        #inv_levenberg_parameter_transform(u) = @. atanh((2*u - (upper + lower)) / (upper - lower))
+        levenberg_parameter_transform(u) = @. lower + (upper-lower) * (atan(u)/π + 0.5)
+        inv_levenberg_parameter_transform(u) = @. tan(π * ((u - lower) / (upper - lower) - 0.5))
 
-    # set up the optimzation problem
-    optf = SciMLBase.OptimizationFunction((u,p) -> lsq_error(u), ADTypes.AutoFiniteDiff())
-    prob = SciMLBase.OptimizationProblem(optf, x0, p, lb = lb, ub = ub)
-    opt = IpoptOptimizer(
-        hessian_approximation = "limited-memory", 
-        acceptable_tol        = 1e-3,
-        acceptable_iter       = 2 # number of iterations after solution is acceptable
-    )
+        levenberg_residual(u, p) = residuals(
+            sim_fit, 
+            levenberg_parameter_transform(u), 
+            spec_exp, 
+            intensity_eval_function, 
+            parameter_update_function!
+        )
 
-    optimal_parameters  = solve(prob, opt).u # scaling back to physical dimenions
-    param_uncertainties = uncertainties(sim_fit, optimal_parameters, spec_exp, intensity_eval_function, scaled_parameter_update_function!,)     
+        prob = NonlinearLeastSquaresProblem(levenberg_residual, inv_levenberg_parameter_transform(initial))
+        solver = LevenbergMarquardt(autodiff = ADTypes.AutoFiniteDiff())
+        optimal_parameters = solve(prob, solver, abstol = 0.01, reltol = 0.100, maxiters = maxiters).u
+        optimal_parameters = levenberg_parameter_transform(optimal_parameters)
+    end
 
-    # scale back parameters to real values
-    optimal_parameters  .*= parameter_scaling_factor
-    param_uncertainties .*= parameter_scaling_factor
+    if solver == :IPOPT
+        normalize_parmeters(u) = @. u / parameter_scaling_factors
+        denormalize_parmeters(u) = @. u * parameter_scaling_factors
+        
+        Ipopt_residual(u, p) = residuals(
+            sim_fit, 
+            denormalize_parmeters(u), 
+            spec_exp, 
+            intensity_eval_function, 
+            parameter_update_function!
+        )
+
+        optf = SciMLBase.OptimizationFunction(
+            (u,p) -> sum(abs2.(Ipopt_residual(u,p))), 
+            ADTypes.AutoFiniteDiff()
+        )
+
+        prob = SciMLBase.OptimizationProblem(
+            optf, 
+            normalize_parmeters(initial), 
+            auxiliary_parameters, 
+            lb = normalize_parmeters(lower), 
+            ub = normalize_parmeters(upper)
+        )
+
+        opt = IpoptOptimizer(
+            hessian_approximation = "limited-memory", 
+            acceptable_tol        = 1e-3,
+            acceptable_iter       = 2, # number of iterations after solution is acceptable
+            mu_strategy           = "monotone"
+        )
+
+        optimal_parameters = solve(prob, opt, maxiters = maxiters).u # scaling back to physical dimenions
+        optimal_parameters = denormalize_parmeters(optimal_parameters)
+    end
+
+
+    param_uncertainties = uncertainties(
+        sim_fit, 
+        optimal_parameters, 
+        spec_exp, 
+        intensity_eval_function, 
+        parameter_update_function!
+    )     
 
     result = FitResult(
         optimal_parameters, 
@@ -115,6 +153,7 @@ function fit_spectrum(;
 
     return result
 end
+
 
 function residuals(sim, param, spec_exp, intensity_eval_function, update_function!)
     update_function!(sim, param)

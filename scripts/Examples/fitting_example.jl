@@ -1,5 +1,9 @@
-
+using Revise
 using NTECARS
+
+######################################################################################
+#                               CREATE CARSSIMULATOR
+######################################################################################
 conditions = GasConditions(
     pressure = 15000.0, # in Pa
     T_gas    = 600.0    # in K
@@ -35,6 +39,10 @@ sim  = CARSSimulator(
 
 synthetic_spectrum = simulate_spectrum(sim)
 
+
+######################################################################################
+#                                      FITTING
+######################################################################################
 function update_function!(sim::CARSSimulator, param)
     println(param)
     T_12, T_3, T_N2vib, T_rot, CO2_frac = param
@@ -45,30 +53,28 @@ function update_function!(sim::CARSSimulator, param)
     # update CO2
     sim.species[1].molar_fraction = CO2_frac
     sim.species[1].distribution = CO2.MultiTemperatureDistribution(
-        T_12  = T_12, 
-        T_3   = T_3,
-        T_rot = T_rot
-        )
+        T_12 = T_12, T_3 = T_3, T_rot = T_rot)
     
     #update N2
     sim.species[2].molar_fraction = 1-CO2_frac
     sim.species[2].distribution = N2.MultiTemperatureDistribution(
-        T_vib = T_N2vib, 
-        T_rot = T_rot
-        )
+        T_vib = T_N2vib, T_rot = T_rot)
 end
 
 
-@time result_free = fit_spectrum(;
+@time result = fit_spectrum(;
     spec_exp     = synthetic_spectrum,
     sim          = sim, 
-    initial      = [500.0, 500.0, 500.0, 500.0, 0.5], 
+    initial      = [500.0, 500.0, 500.0, 500.0, 0.1], 
     lower        = [0.0, 0.0, 0.0, 0.0, 0.0],
-    upper        = [3000.0, 3000.0, 3000.0, 3000.0, 1.0],
-    parameter_update_function! = update_function!
+    upper        = [3000.0, 3000.0, 3000.0, 3000.0, 0.2],
+    parameter_update_function! = update_function!,
+    solver       = :IPOPT
 )
 
-
+######################################################################################
+#                                      PLOTTING
+######################################################################################
 using CairoMakie
 with_theme(theme_latexfonts()) do
     fig = Figure(size = (800, 600), fontsize = 40, figure_padding = 30)
