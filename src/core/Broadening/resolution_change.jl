@@ -6,12 +6,10 @@ function average_to_detector_pixels(S::Spectrum, ν_pixel)
     S_pixel = Spectrum(copy(ν_pixel), itp.(ν_pixel), :wavenumber)
     
     Δν = abs(ν_pixel[2] - ν_pixel[1])
-    Threads.@threads for i in eachindex(ν_pixel)
-        ν_left  = ν_pixel[i] - 1/2 * Δν
-        ν_right = ν_pixel[i] + 1/2 * Δν
-        S_pixel.I[i] = (itp(ν_left)+itp(ν_pixel[i])+itp(ν_right))/3
+    Threads.@threads for i in eachindex(wavenumbers(S_pixel))
+        ν_center = wavenumbers(S_pixel)[i]
+        S_pixel.I[i] = mean(itp(ν_center .+ Δν .* [-1/2, -1/4, 0, 1/4, 1/2]))
     end
-    
     return S_pixel
 end
 

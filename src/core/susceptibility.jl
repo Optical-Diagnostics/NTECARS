@@ -10,8 +10,8 @@ function total_susceptibility(sim::CARSSimulator)
     N    = length(ν_aS)
     χ1   = Spectrum(ν_aS, zeros(Complex, N), :wavenumber)
     χ2   = Spectrum(ν_aS, zeros(Complex, N), :wavenumber)
-    ν_raman_1 = ν_aS .- sim.lasers.ν_1
-    ν_raman_2 = ν_aS .- sim.lasers.ν_2
+    ν_raman_2 = ν_aS .- sim.lasers.ν_1
+    ν_raman_1 = ν_aS .- sim.lasers.ν_2
 
     for species in sim.species
         χ1.I .+= molar_fraction(species) .* (χ_CARS(
