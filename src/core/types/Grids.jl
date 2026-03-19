@@ -60,7 +60,6 @@ end
 ##########################################################################
 #                  Logic for construction and interpolation
 ##########################################################################
-
 function interpolate_to_uniform(spec::Spectrum, Δν = 0.01)
     interpol  = linear_interpolation(wavenumbers(spec), intensities(spec), extrapolation_bc=Line())
     ν_uniform = collect(spec.ν[1]:Δν:spec.ν[end])

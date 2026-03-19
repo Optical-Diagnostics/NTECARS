@@ -1,4 +1,3 @@
-using Revise
 using NTECARS
 using CairoMakie
 CairoMakie.activate!()

@@ -1,16 +1,26 @@
 """
-    GasConditions(;pressure::AbstractFloat, T_gas::AbstractFloat) 
+    GasConditions(; pressure, T_gas) -> GasConditions
 
-Contains the basis information of the pressure in Pa and translational temperature in K.
+Constructs a `GasConditions` the gas temperature and pressure used for linewidth 
+calculations
 
-The pressure and translational temperature are used for calculating linewidths. When fitting,
-it should be remembered to update `T_gas` accordingly.
+# Constructor Arguments
+- `pressure::AbstractFloat`: Gas pressure in Pa.
+- `T_gas::AbstractFloat`: Translational temperature in K.
+
+# Fields of returned type
+- `pressure::AbstractFloat`: Gas pressure in Pa.
+- `T_gas::AbstractFloat`: Translational temperature in K.
+
+# Notes
+- `T_gas` represents the translational temperature and is used for linewidth calculations. 
+  It should match `T_rot` of the species distributions when assuming rotational equilibrium.
 
 # Examples
 ```Julia
 conditions = GasConditions(
-    pressure = 15000.0,
-    T_gas    = 600.0   
+    pressure = 15000.0,  # 150 mbar
+    T_gas    = 600.0     # K
 )
 ```
 """

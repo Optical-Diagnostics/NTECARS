@@ -5,38 +5,57 @@ struct FlatProfile <: AbstractSpectralProfile end
 
 """
     LaserConfiguration(; wavelength_1, wavelength_2, stokes_range,
-                         profile_1=DeltaProfile(),
-                         profile_2=DeltaProfile(),
-                         stokes_profile=FlatProfile())
+                         profile_1=DeltaProfile(), profile_2=DeltaProfile(),
+                         stokes_profile=FlatProfile()) -> LaserConfiguration
 
-Stores the laser wavelengths and spectral profiles.
+Constructs a `LaserConfiguration` storing the laser wavelengths and spectral profiles.
 
-# Arguments
-- `wavelength_1::Float64`: Central wavelength of the first laser (in meters).
-- `wavelength_2::Float64`: Central wavelength of the second laser (in meters).
-- `stokes_range::Tuple{Float64,Float64}`: Wavelength range over which the
-  Stokes spectrum is defined (in meters). This determines the range of anti-Stokes 
-  frequencies together with the central wavelengths.
+# Constructor Arguments
+- `wavelength_1::Float64`: Central wavelength of the first laser in meters.
+- `wavelength_2::Float64`: Central wavelength of the second laser in meters.
+- `stokes_range::Tuple{Float64,Float64}`: Wavelength range over which the Stokes
+  spectrum is defined, in meters. Together with the laser wavelengths, this determines
+  the simulated anti-Stokes frequency range.
+- `profile_1::Union{DeltaProfile, Spectrum}`: Spectral profile of the first laser.
+  Use `DeltaProfile()` for an ideal monochromatic laser.
+- `profile_2::Union{DeltaProfile, Spectrum}`: Spectral profile of the second laser.
+- `stokes_profile::Union{FlatProfile, Spectrum}`: Stokes spectral profile defined
+  at the physical Stokes wavelength range (not around 0). Use `FlatProfile()` if the
+  experimental data is already normalised by the Stokes profile or non-resonant
+  background.
+
+# Fields of returned type
+- `ν_1::Float64`: Central wavenumber of the first laser in cm⁻¹.
+- `ν_2::Float64`: Central wavenumber of the second laser in cm⁻¹.
 - `profile_1::Union{DeltaProfile, Spectrum}`: Spectral profile of the first laser.
 - `profile_2::Union{DeltaProfile, Spectrum}`: Spectral profile of the second laser.
-- `stokes_profile::Spectrum`: Stokes spectral profile. The Stokes-spectrum has to be defined at
-  the correct physical spectral range (not around 0!). A `FlatProfile` should be used if 
-  the experimental data is already normalized by the stokes-proflie/non-resonant background.
+- `stokes_profile::Spectrum`: Stokes spectral profile.
+- `ν_aS_limits::Tuple{Float64,Float64}`: Anti-Stokes wavenumber limits in cm⁻¹,
+  computed as `extrema(ν₁ + ν₂ − ν_S)`.
 
 # Notes
-- `Spectrum` can be created from user data or Gaussian(σ), Voigt(σ, γ), PowerVoigt(σ, γ, n)
-- Internally, wavelengths are converted to wavenumbers.
-- The anti-Stokes limits are computed as `extrema(ν₁ + ν₂ − stokes_range)`.
+- Wavelengths are converted to wavenumbers internally. All spectral fields are
+  stored in cm⁻¹.
+- For standard profiles convenience constructors are implemented: [`Gaussian`](@ref),
+  [`Voigt`](@ref), [`PowerVoigt`](@ref)
 
 # Examples
 ```Julia
+# Ideal lasers with flat Stokes background
 lasers = LaserConfiguration(
-    wavelength_1    = 532e-9,
-    wavelength_2    = 561e-9,
-    stokes_range    = (600e-9, 610e-9),
-    profile_1       = Gaussian(0.2), # inputs are σ in cm^-1
-    profile_2       = Voigt(0.1, 0.05), # inputs are σ, γ  in cm^-1
-    stokes_profile  = Spectrum([600e-9, 605e-9, 610e-0], [0.0, 1.0, 0.0], :wavelength)
+    wavelength_1 = 532e-9,
+    wavelength_2 = 561e-9,
+    stokes_range = (600e-9, 610e-9),
+)
+
+# Broadened lasers with measured Stokes profile
+lasers = LaserConfiguration(
+    wavelength_1 = 532e-9,
+    wavelength_2 = 561e-9,
+    stokes_range = (600e-9, 610e-9),
+    profile_1    = Gaussian(0.2),
+    profile_2    = Voigt(0.1, 0.05),
+    stokes_profile = Spectrum([600e-9, 605e-9, 610e-9], [0.0, 1.0, 0.0], :wavelength)
 )
 ```
 """

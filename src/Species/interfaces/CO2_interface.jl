@@ -1,10 +1,53 @@
+"""
+    CO2Species(; molar_fraction, distribution, v_max=(1,2,1), J_max=100,
+                 chi_non_resonant=4.5e-51, use_collisional_narrowing=true) -> CO2Species
+
+Generates the transition database and then constructs a `CO2Species` and returns it.
+
+# Constructor Arguments
+- `molar_fraction::Float64`: Molar fraction of CO₂ in the gas mixture.
+- `distribution::CO2Distribution`: Rovibrational population distribution, e.g.
+  [`CO2.MultiTemperatureDistribution`](@ref).
+- `v_max::Tuple{Int64,Int64,Int64}`: Maximum vibrational quantum numbers
+  `(v1_max, v2_max, v3_max)` used to truncate the transition database. Higher.
+  values increase accuracy at high temperatures at the cost of computation time.
+- `J_max::Int`: Maximum rotational quantum number in the transition database.
+- `chi_non_resonant`: Non-resonant susceptibility in m²V²/m³.
+- `use_collisional_narrowing::Bool`: Whether to apply collisional narrowing.
+
+# Fields of returned type
+- `molar_fraction::Float64`: Molar fraction of CO₂ in the gas mixture.
+- `χ_non_resonant::Float64`: Non-resonant susceptibility in m²V²/m³.
+- `transitions::Dict{String, Vector{CO2Transition}}`: Transition database generated
+  from `v_max` and `J_max` at construction time.
+- `distribution::CO2Distribution`: Rovibrational population distribution.
+- `use_collisional_narrowing::Bool`: Whether collisional narrowing is applied.
+- `name::String`: Species identifier, always `"CO2"`. Required internally for
+  constructing molar fraction dictionaries.
+
+# Notes
+- The transition database is computed once at construction via
+  `CO2.get_transition_database_CO2` and stored in `transitions`. Increasing
+  `v_max` can cause significant comuptation times since large hamiltonians
+  have to be solved.
+- `name` is always set to `"CO2"` and cannot be changed.
+
+# Examples
+```Julia
+co2 = CO2Species(
+    molar_fraction = 0.1,
+    distribution   = CO2.MultiTemperatureDistribution(T_12 = 300.0, T_3 = 1800.0, T_rot = 300.0),
+    v_max          = (1, 2, 1),
+)
+```
+"""
 mutable struct CO2Species  <: CARSSpecies
     molar_fraction            ::Float64
     χ_non_resonant            ::Float64
     transitions               ::Dict{String, Vector{CO2Transition}}
     distribution              ::CO2Distribution
     use_collisional_narrowing ::Bool
-    name                     ::String #HAS TO BE CO2, is needed for creating dictionary with molar fractions
+    name                      ::String #HAS TO BE CO2, is needed for creating dictionary with molar fractions
 
     function CO2Species(;
         molar_fraction::Float64,

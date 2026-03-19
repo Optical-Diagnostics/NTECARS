@@ -36,7 +36,7 @@ nothing #hide
 ```
 
 ## GasConditions
-The bulk-gas parameters of pressure (Pa) and translational temperature (K) are used for the calculation and stored in `GasConditions`:
+The bulk-gas parameters of pressure (Pa) and translational temperature (K) are used for the calculation of linewidths and are stored in `GasConditions`:
 ```@example ntecars
 conditions = GasConditions(
     pressure = 15000.0, # in Pa

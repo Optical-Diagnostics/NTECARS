@@ -1,3 +1,38 @@
+"""
+    N2Species(; molar_fraction, distribution, v_max=4, J_max=50,
+                chi_non_resonant=4.42e-51, use_collisional_narrowing=true) -> N2Species
+
+Constructs an `N2Species` and generates the transition database.
+
+# Constructor Arguments
+- `molar_fraction::Float64`: Molar fraction of N₂ in the gas mixture.
+- `distribution::N2Distribution`: Rovibrational population distribution, such as
+  [`N2.MultiTemperatureDistribution`](@ref), [`N2.FreeVibrationalDistribution`](@ref),
+  [`N2.TwoTemperatureDistribution`](@ref).
+- `v_max::Int`: Maximum vibrational quantum number used to truncate the transition 
+  database.
+- `J_max::Int`: Maximum rotational quantum number in the transition database.
+- `chi_non_resonant`: Non-resonant susceptibility in m²V²/m³.
+- `use_collisional_narrowing::Bool`: Whether to apply collisional narrowing.
+
+# Fields of returned type
+- `molar_fraction::Float64`: Molar fraction of N₂ in the gas mixture.
+- `χ_non_resonant::Float64`: Non-resonant susceptibility in m²V²/m³.
+- `transitions::Dict{String, Vector{N2Transition}}`: Transition database.
+- `distribution::N2Distribution`: Rovibrational population distribution.
+- `use_collisional_narrowing::Bool`: Whether collisional narrowing is applied.
+
+# Notes
+- The transition database is computed once at construction.
+
+# Examples
+```Julia
+n2 = N2Species(
+    molar_fraction = 0.9,
+    distribution   = N2.MultiTemperatureDistribution(T_vib=300.0, T_rot=300.0),
+)
+```
+"""
 mutable struct N2Species  <: CARSSpecies
     molar_fraction ::Float64
     χ_non_resonant ::Float64

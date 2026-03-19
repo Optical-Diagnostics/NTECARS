@@ -1,4 +1,34 @@
+"""
+    FitResult
 
+Stores the complete result of a [`fit_spectrum`](@ref) call.
+
+# Fields
+- `param::Vector{Float64}`: Optimal fit parameters found by the solver.
+- `uncertainties::Vector{Float64}`: Parameter uncertainties estimated from the
+  Jacobian SVD at the optimal solution. Set to zeros if `compute_uncertainties = false`
+  was passed to `fit_spectrum`.
+- `fitted_spectrum::Spectrum`: Simulated spectrum evaluated on the simulator's
+  internal wavenumber grid.
+- `fitted_spectrum_at_measurement::Spectrum`: Simulated spectrum evaluated at the
+  wavenumber positions of the experimental spectrum. Use this for direct
+  comparison with `experimental_spectrum`.
+- `sim::CARSSimulator`: Deep copy of the simulator after convergence, updated with
+  the optimal parameters via `parameter_update_function!`.
+- `experimental_spectrum::Spectrum`: The measured spectrum passed to `fit_spectrum`.
+  Stored to allow serialization and later re-evaluation of the result.
+- `parameter_update_function!::Function`: The update function used during fitting.
+  Stored to allow re-simulation or re-fitting from the result.
+- `intensity_eval_function::Function`: The intensity transformation applied to both
+  spectra during fitting. Stored to allow consistent re-evaluation of residuals.
+
+# Notes
+- `fitted_spectrum` and `fitted_spectrum_at_measurement` differ only in their
+  wavenumber grids. For plotting against measured data, prefer
+  `fitted_spectrum_at_measurement`.
+- All fields needed to reproduce or serialize the fit are stored directly in the
+  struct, so no reference to the original `sim` or functions is required after fitting.
+"""
 struct FitResult
     # results
     param::Vector{Float64}
@@ -15,9 +45,9 @@ end
 """
     fit_spectrum(; spec_exp, sim, parameter_update_function!, initial, lower, upper, 
         intensity_eval_function = x -> abs.(x ./ maximum(x)).^(1/2) , parameter_scaling_factor = initial,
-        solver::Symbol = :LM, maxiters= 200)
+        solver::Symbol = :LM, maxiters= 200, compute_uncertainties = true) -> FitResult
 
-Fits the the model to a measured spectrum.
+Fits the the model to a measured spectrum and returns a collection of results in a [`FitResult`](@ref).
 
 # Arguments
 - `spec_exp::Spectrum`: The measured spectrum that should be fitted
@@ -32,6 +62,7 @@ Fits the the model to a measured spectrum.
   a fitting of the normalized sqaure-root of the CARS-intensity.
 - `solver::Symbol`: Options are `:LM` for LevenbergMarquardt and `:IPOPT` for the IPOPT solver.
 - `maxiters::Int64`: Maximum number of iterations
+- `compute_uncertainties`::Bool = true: Mostly an option to disable for cases is which the SVD throws an error. 
 
 # return 
 - `FitResult`: contains parameters, spectra, uncertainties etc...
@@ -46,7 +77,7 @@ function update_function!(sim::CARSSimulator, param)
     T_vib, T_rot = param
     sim.conditions.T_gas = T_rot
     sim.species[1].distribution = N2.MultiTemperatureDistribution(
-        T_vib = T_N2vib, T_rot = T_rot)
+        T_vib = T_vib, T_rot = T_rot)
 end
 
 result = fit_spectrum(;
@@ -69,7 +100,8 @@ function fit_spectrum(;
     intensity_eval_function::Function = x -> abs.(x ./ maximum(x)).^(1/2),
     parameter_scaling_factors = initial,
     solver::Symbol = :IPOPT,
-    maxiters::Int64 = 200
+    maxiters::Int64 = 200,
+    compute_uncertainties = true
 )
     # copy to not modify the users sim struct
     sim_fit = deepcopy(sim)
@@ -131,14 +163,17 @@ function fit_spectrum(;
         optimal_parameters = denormalize_parmeters(optimal_parameters)
     end
 
-
-    param_uncertainties = uncertainties(
-        sim_fit, 
-        optimal_parameters, 
-        spec_exp, 
-        intensity_eval_function, 
-        parameter_update_function!
-    )     
+    if compute_uncertainties
+        param_uncertainties = uncertainties(
+            sim_fit, 
+            optimal_parameters, 
+            spec_exp, 
+            intensity_eval_function, 
+            parameter_update_function!
+        )    
+    else 
+        param_uncertainties = zeros(length(optimal_parameters))
+    end
 
     result = FitResult(
         optimal_parameters, 

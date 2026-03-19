@@ -1,3 +1,51 @@
+"""
+    N2.FreeVibrationalDistribution(; f_vib=nothing, delta_f_vib=nothing, T_rot,
+                                     closure=:zero) -> FreeVibrationalDistribution
+
+Constructs a `FreeVibrationalDistribution` for N₂ with freely specifiable vibrational
+level populations. Vibrational opulations can be specified either as absolute values `f_vib` or 
+as inter-level differences `delta_f_vib`. Exactly one of `f_vib` or `delta_f_vib` must be provided.
+
+# Constructor Arguments
+- `f_vib::Vector{<:AbstractFloat}`: Absolute vibrational level populations starting from v=0, 
+  normalised such that `f_vib[1] = 1.0` for `v = 0`.
+- `delta_f_vib::Vector{<:AbstractFloat}`: Population differences between successive
+  vibrational levels, i.e. `delta_f_vib[i] = f_vib[i+1] - f_vib[i]`.
+- `T_rot::AbstractFloat`: Rotational temperature in K.
+- `closure::Symbol`: Only used when constructing from `delta_f_vib`. Determines how
+  the population of the highest vibrational level is closed.
+
+# Fields of returned type
+- `f_vib::Vector{AbstractFloat}`: Relative vibrational level populations with
+  `f_vib[1] = 1.0` for `v = 0`.
+- `T_rot::AbstractFloat`: Rotational temperature in K.
+- `Q::AbstractFloat`: Total partition sum, computed at construction.
+- `Q_rot::AbstractFloat`: Rotational partition sum, computed at construction.
+
+# Notes
+- Exactly one of `f_vib` or `delta_f_vib` must be provided. Providing both or
+  neither will throw an error.
+- When fitting, it is more stable/robust to fit population differences. When fitting,
+  delta_f_vib[1] should be fixed at 1 because the distribution gets normalized and this 
+  provides a reference to the solver. Then only delta_f_vib[2] and higher are fit
+  parameters.
+
+# Examples
+```Julia
+# From absolute populations
+dist = N2.FreeVibrationalDistribution(
+    f_vib = [1.0, 0.3, 0.09, 0.027], # gets normalized correctly by the function
+    T_rot = 600.0
+)
+
+# From inter-level differences
+dist = N2.FreeVibrationalDistribution(
+    delta_f_vib = [1.0, 0.2, 0.01], # gets normalized correctly by the function
+    T_rot       = 600.0,
+    closure     = :zero
+)
+```
+"""
 struct FreeVibrationalDistribution <: N2Distribution
     f_vib::Vector{AbstractFloat}      # relative populations, f_vib[1] == 1.0 for v=0
     T_rot::AbstractFloat              # rotational temperature

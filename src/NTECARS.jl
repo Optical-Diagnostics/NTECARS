@@ -49,7 +49,7 @@ module NTECARS
     fit_spectrum, N2Species, CO2Species, raman_shifts, voigt_profile, voigt_super_profile, 
     gaussian_profile, voigt_asymmetric_profile, save_fit_results, spectra_compariso_with_residual,
     cut_spectral_range, total_susceptibility, DeltaProfile, FlatProfile, normalize_by_stokes_intensity!,
-    Gaussian, Voigt, PowerVoigt
+    Gaussian, Voigt, PowerVoigt, FitResult
 end
 
 

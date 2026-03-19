@@ -25,10 +25,8 @@ function convolute_with_stokes_profile!(χ²::Spectrum, L::LaserConfiguration)
     ν_S = L.ν_1 + L.ν_2 .- wavenumbers(χ²)
     χ².I .*= stokes_interpol.(ν_S)
 end
-"""
 
 
-"""
 function raman_shifts(;chi2::Spectrum, lasers::LaserConfiguration)
     raman_shift_1 = wavenumbers(chi2) .- lasers.ν_2
     raman_shift_2 = wavenumbers(chi2) .- lasers.ν_1

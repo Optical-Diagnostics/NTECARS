@@ -11,7 +11,13 @@ makedocs(
             "Setup for Spectra Calculation" => "Setup_for_spectra.md",
             "Fitting" => "fitting.md"
         ],
-        "References" => "reference.md"
+        "References" => [
+            "Spectra"  => "reference/spectra.md",
+            "CARSSimulator setup"  => "reference/CARSSimulator_construction.md",
+            "CO2" => "reference/CO2.md",
+            "N2" => "reference/N2.md",
+            "Fitting"  => "reference/fitting.md"
+        ]#"reference.md"
     ],
     #clean=true,
     checkdocs=:exports,

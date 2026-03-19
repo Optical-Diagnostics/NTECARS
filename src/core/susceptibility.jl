@@ -1,8 +1,4 @@
-"""
-    total_susceptibility(sim::CARSSimulator)
 
-test2
-"""
 function total_susceptibility(sim::CARSSimulator)
     molar_fractions_dict = Dict([species.name => molar_fraction(species) for species in sim.species])
 

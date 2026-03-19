@@ -15,14 +15,16 @@ function save_fit_results(folderpath, result::FitResult, parameter_labels = ["fi
         "Raman shift (cm^-1) [omega_pr-omega_S]",
         "Raman shift (cm^-1) [omega_pu-omega_S]",
         "sqrt(I_CARS) [Experiment]",
-        "sqrt(I_CARS) [Fit]"
+        "sqrt(I_CARS) [Fit]",
+        "residual"
     ]
     field_values = [
         wavelengths(result.experimental_spectrum) .* 1e9,
         ν_raman_1,
         ν_raman_2,
         normalized_sqrt(result.experimental_spectrum.I),
-        normalized_sqrt(result.fitted_spectrum_at_measurement.I)
+        normalized_sqrt(result.fitted_spectrum_at_measurement.I),
+        normalized_sqrt(result.experimental_spectrum.I) .- normalized_sqrt(result.fitted_spectrum_at_measurement.I)
     ]
 
     df = DataFrame(field_values, field_names)

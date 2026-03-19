@@ -1,16 +1,30 @@
 """
-    InstrumentConfiguration(;profile::Union{DeltaProfile,Spectrum} = DeltaProfile())
+    InstrumentConfiguration(; profile=DeltaProfile()) -> InstrumentConfiguration
 
-Contains information about the broadening profile introduced by physical measurement devices (spectrometer). 
+Constructs an `InstrumentConfiguration` storing the instrumental broadening profile
+of the spectrometer or other measurement devices and returns it.
 
-When no instrumental broadening is present, it should contain the default `DeltaProfile()`. Otherwise,
-`profile` can be given profiles created by existing functions such as `Gaussian(σ)`, `Voigt(σ, γ)` or 
-`PowerVoigt(σ, γ, n)`. Alternatively, a `Spectrum` containing a discrete spectrum can be used. 
-The profiles should be centered around 0 but do not have to be symmetric.
+# Constructor Arguments
+- `profile::Union{DeltaProfile, Spectrum}`: Instrumental broadening profile, centred
+  around 0. Use `DeltaProfile()` if no instrumental broadening is present. For standard 
+  profiles, convenience constructors are implemented: [`Gaussian`](@ref),
+  [`Voigt`](@ref), [`PowerVoigt`](@ref). A spectrum from use data can be passed in the form
+  of a [`Spectrum`](@ref).The profile does not have to be symmetric.
+
+# Fields of returned type
+- `profile::Union{DeltaProfile, Spectrum}`: The instrumental broadening profile.
 
 # Examples
 ```Julia
-InstrumentConfiguration(profile = Gaussian(0.2/2.35))
+# No instrumental broadening
+instrument = InstrumentConfiguration()
+
+# Gaussian broadening with FWHM = 0.2 cm⁻¹
+instrument = InstrumentConfiguration(profile = Gaussian(0.2/2.355))
+
+# Measured instrument profile from data
+instrument = InstrumentConfiguration(
+    profile = Spectrum(wavenumbers, intensities, :wavenumber))
 ```
 """
 mutable struct InstrumentConfiguration

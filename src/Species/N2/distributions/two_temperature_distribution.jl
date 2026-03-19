@@ -1,3 +1,40 @@
+"""
+    N2.TwoTemperatureDistribution(; T_vib_cold, T_vib_hot, Rh, T_rot,
+                                    vib_states=N2.vib_states(10)) -> TwoTemperatureDistribution
+
+Constructs a `TwoTemperatureDistribution` for N₂ representing a bimodal vibrational
+population consisting of a cold and a hot sub-population. 
+(ref: J Kuhfeld et al 2021 J. Phys. D: Appl. Phys. 54 305205)
+
+# Constructor Arguments
+- `T_vib_cold::AbstractFloat`: Vibrational temperature of the cold population in K.
+- `T_vib_hot::AbstractFloat`: Vibrational temperature of the hot population in K.
+- `Rh::AbstractFloat`: Fraction of molecules in the hot vibrational population ∈ [0, 1].
+  The cold population fraction is `1 - Rh`.
+- `T_rot::AbstractFloat`: Rotational temperature in K, shared by both populations.
+- `vib_states`: Vibrational states used to compute the partition sums. Defaults to
+  `N2.vib_states(10)`, which includes the 10 lowest vibrational levels.
+
+# Fields of returned type
+- `T_vib_cold::AbstractFloat`: Vibrational temperature of the cold population in K.
+- `T_vib_hot::AbstractFloat`: Vibrational temperature of the hot population in K.
+- `Rh::AbstractFloat`: Fraction of molecules in the hot vibrational population.
+- `T_rot::AbstractFloat`: Rotational temperature in K.
+- `Q_cold::AbstractFloat`: Partition sum of the cold population, computed at construction.
+- `Q_hot::AbstractFloat`: Partition sum of the hot population, computed at construction.
+- `Q_rot::AbstractFloat`: Rotational partition sum, computed at construction.
+
+# Examples
+```Julia
+# 10% of molecules in a hot vibrational population
+dist = N2.TwoTemperatureDistribution(
+    T_vib_cold = 500.0,
+    T_vib_hot  = 5000.0,
+    Rh         = 0.1,
+    T_rot      = 600.0
+)
+```
+"""
 struct TwoTemperatureDistribution <: N2Distribution
     T_vib_cold::AbstractFloat         
     T_vib_hot::AbstractFloat
