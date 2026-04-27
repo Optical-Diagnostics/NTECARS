@@ -1,4 +1,49 @@
 
+"""
+    save_fit_results(folderpath, result::FitResult,
+                     parameter_labels=["fit param \$(i)" for i in eachindex(result.param)])
+
+Saves the complete results of a `FitResult` to a folder structure of CSV files,
+including the fitted and experimental spectra, fit parameters with uncertainties,
+and rovibrational populations for each species.
+
+# Arguments
+- `folderpath`: Path to the output folder.
+- `result::FitResult`: The fit result returned by [`fit_spectrum`](@ref).
+- `parameter_labels`: Labels for the fit parameters used in the output file. 
+  Defaults to `["fit param 1", "fit param 2", ...]`.
+
+# Output files
+- `fit_and_experiment_at_measurement_points.csv`: Fitted and experimental `√(I_CARS)`
+  at the experimental wavenumber grid, including the residual. Contains anti-Stokes
+  wavelength and Raman shift columns relative to both lasers.
+- `fit_at_simulated_resolution.csv`: Fitted `√(I_CARS)` at the full simulation
+  resolution, which is typically finer than the experimental grid.
+- `fit_parameters.csv`: Fitted parameter values with absolute and relative
+  uncertainties (%) for each parameter.
+- `CO2_rovibrational_populations/`: Created if a `CO2Species` is present in
+  `result.sim.species`. Contains one CSV per vibrational state with rotational
+  populations `[CO2(v,J)]/[CO2]` and their uncertainties, plus a summary
+  `vibrational_populations.csv`.
+- `N2_rovibrational_populations/`: Created if an `N2Species` is present in
+  `result.sim.species`. Contains one CSV per vibrational level with rotational
+  populations `[N2(v,J)]/[N2]` and their uncertainties, plus a summary
+  `vibrational_populations.csv`.
+
+# Notes
+- Rovibrational populations are computed with uncertainty propagation via the
+  `Measurements.jl` package. Only the uncertainties of fit parameters and not
+  the uncertainties of the polarizabilities and linewidths are considered.
+
+# Examples
+```Julia
+save_fit_results("results/measurement_01", result)
+
+# With custom parameter labels
+save_fit_results("results/measurement_01", result,
+    ["T_12 (K)", "T_3 (K)", "T_N2vib (K)", "T_rot (K)", "CO2 molar fraction"])
+```
+"""
 function save_fit_results(folderpath, result::FitResult, parameter_labels = ["fit param $(i)" for i in eachindex(result.param)])
     # create folder structure for given folderpath if it doesnt exist
     mkpath(folderpath) 
@@ -12,8 +57,8 @@ function save_fit_results(folderpath, result::FitResult, parameter_labels = ["fi
     ν_raman_1, ν_raman_2 = raman_shifts(chi2 = result.experimental_spectrum, lasers = result.sim.lasers)
     field_names = [
         "anti-Stokes wavelength (nm)",
-        "Raman shift (cm^-1) [omega_pr-omega_S]",
-        "Raman shift (cm^-1) [omega_pu-omega_S]",
+        "Raman shift (cm^-1) [omega_1-omega_S]",
+        "Raman shift (cm^-1) [omega_2-omega_S]",
         "sqrt(I_CARS) [Experiment]",
         "sqrt(I_CARS) [Fit]",
         "residual"
@@ -37,8 +82,8 @@ function save_fit_results(folderpath, result::FitResult, parameter_labels = ["fi
     ν_raman_1, ν_raman_2 = raman_shifts(chi2 = result.fitted_spectrum, lasers = result.sim.lasers)
     field_names = [
         "anti-Stokes wavelength (nm)",
-        "Raman shift (cm^-1) [omega_pr-omega_S]",
-        "Raman shift (cm^-1) [omega_pu-omega_S]",
+        "Raman shift (cm^-1) [omega_1-omega_S]",
+        "Raman shift (cm^-1) [omega_2-omega_S]",
         "sqrt(I_CARS) [Fit]"
     ]
     field_values = [

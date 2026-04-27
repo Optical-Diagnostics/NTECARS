@@ -1,8 +1,8 @@
 """
-    N2.TwoTemperatureDistribution(; T_vib_cold, T_vib_hot, Rh, T_rot,
-                                    vib_states=N2.vib_states(10)) -> TwoTemperatureDistribution
+    N2.TwoPopulationDistribution(; T_vib_cold, T_vib_hot, Rh, T_rot,
+                                    vib_states=N2.vib_states(10)) -> TwoPopulationDistribution
 
-Constructs a `TwoTemperatureDistribution` for N₂ representing a bimodal vibrational
+Constructs a `TwoPopulationDistribution` for N₂ representing a bimodal vibrational
 population consisting of a cold and a hot sub-population. 
 (ref: J Kuhfeld et al 2021 J. Phys. D: Appl. Phys. 54 305205)
 
@@ -27,7 +27,7 @@ population consisting of a cold and a hot sub-population.
 # Examples
 ```Julia
 # 10% of molecules in a hot vibrational population
-dist = N2.TwoTemperatureDistribution(
+dist = N2.TwoPopulationDistribution(
     T_vib_cold = 500.0,
     T_vib_hot  = 5000.0,
     Rh         = 0.1,
@@ -35,7 +35,7 @@ dist = N2.TwoTemperatureDistribution(
 )
 ```
 """
-struct TwoTemperatureDistribution <: N2Distribution
+struct TwoPopulationDistribution <: N2Distribution
     T_vib_cold::AbstractFloat         
     T_vib_hot::AbstractFloat
     Rh::AbstractFloat                # fraction in hot population
@@ -44,28 +44,25 @@ struct TwoTemperatureDistribution <: N2Distribution
     Q_hot::AbstractFloat
     Q_rot::AbstractFloat             # rotational partition sum
 
-    function TwoTemperatureDistribution(;T_vib_cold::AbstractFloat, T_vib_hot::AbstractFloat,
+    function TwoPopulationDistribution(;T_vib_cold::AbstractFloat, T_vib_hot::AbstractFloat,
                                         Rh::AbstractFloat, T_rot::AbstractFloat, vib_states = N2.vib_states(10))
         Q_rot = rot_partition_sum(T_rot)
         Q_cold = sum(Boltzmann_factor(s.E_vib, T_vib_cold) * Q_rot for s in vib_states)
-        Q_hot  = sum(Boltzmann_factor(s.E_vib, T_vib_hot) * Q_rot for s in vib_states)
+        Q_hot  = sum(Boltzmann_factor(s.E_vib, T_vib_hot) * Q_rot for s in vib_states[2:end])
         return new(T_vib_cold, T_vib_hot, Rh, T_rot, Q_cold, Q_hot, Q_rot)
     end
 end
 
-function (df::TwoTemperatureDistribution)(state::State)
-    f_vib = Boltzmann_factor(state.E_vib, df.T_vib)
-    f_rot = Boltzmann_factor(state.E_rot, df.T_rot)
-    return state.degen/df.Q * f_vib * f_rot
+function (df::TwoPopulationDistribution)(state::State)
+    f_vib_cold = (1-df.Rh)/df.Q_cold * Boltzmann_factor(state.E_vib, df.T_vib_cold)
+    f_vib_hot  = df.Rh/df.Q_hot * Boltzmann_factor(state.E_vib, df.T_vib_hot)
+    f_rot      = Boltzmann_factor(state.E_rot, df.T_rot)
+    return state.degen * f_rot * (f_vib_cold + f_vib_hot)
 end
 
-function fvib(df::TwoTemperatureDistribution, state::State)
-    f_vib = (1-df.Rh)/df.Q_cold * Boltzmann_factor(state.E_vib, df.T_vib_cold) + 
-            df.Rh/df.Q_hot * Boltzmann_factor(state.E_vib, df.T_vib_hot) 
-    return f_vib
-end
-
-function vibrational_population(df::TwoTemperatureDistribution, v)
-    f_vib = fvib(df, State(v,0))
-    return df.Q_rot * f_vib
+function vibrational_population(df::TwoPopulationDistribution, v)
+    s = State(v,0)
+    f_vib_cold = (1-df.Rh)/df.Q_cold * Boltzmann_factor(s.E_vib, df.T_vib_cold)
+    f_vib_hot  = df.Rh/df.Q_hot * Boltzmann_factor(s.E_vib, df.T_vib_hot)
+    return df.Q_rot * (f_vib_cold + f_vib_hot)
 end

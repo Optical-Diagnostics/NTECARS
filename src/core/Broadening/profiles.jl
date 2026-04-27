@@ -74,10 +74,10 @@ end
 #               Broanening profiles
 ##################################################
 function power_voigt_spectrum(σ, γ, n, μ=0.0)
-    threshold = 0.0001
+    threshold = 1e-6
     if voigt_super(1000.0, σ, γ, n) < threshold
         # find where profile decreases to less than 0.001% of the maximum
-        ν_max = find_zero(x -> voigt_super(x, σ, γ, n) - 1e-5, (0.0, 1000.0))
+        ν_max = find_zero(x -> voigt_super(x, σ, γ, n) - threshold, (0.0, 1000.0))
     else
         ν_max = 100
     end

@@ -13,7 +13,7 @@ module N2
     include("distributions/general.jl")
     include("distributions/multitemperature_distribution.jl")
     include("distributions/free_vibrational_distribution.jl")
-    include("distributions/two_temperature_distribution.jl")
+    include("distributions/two_population_distribution.jl")
 
     include("spectrum/transitions.jl")
     include("spectrum/polarizability.jl")

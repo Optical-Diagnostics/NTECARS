@@ -19,8 +19,7 @@ Stores the complete result of a [`fit_spectrum`](@ref) call.
   Stored to allow serialization and later re-evaluation of the result.
 - `parameter_update_function!::Function`: The update function used during fitting.
   Stored to allow re-simulation or re-fitting from the result.
-- `intensity_eval_function::Function`: The intensity transformation applied to both
-  spectra during fitting. Stored to allow consistent re-evaluation of residuals.
+- `weights::Function`: The weights used for weighted least-squares
 
 # Notes
 - `fitted_spectrum` and `fitted_spectrum_at_measurement` differ only in their
@@ -39,7 +38,7 @@ struct FitResult
     # for later serialization
     experimental_spectrum::Spectrum
     parameter_update_function!::Function
-    intensity_eval_function::Function
+    weights::Union{Nothing, Spectrum}
 end
 
 """
@@ -57,12 +56,14 @@ Fits the the model to a measured spectrum and returns a collection of results in
 - `initial::Vector{Float64}`: Initial values of the fit parameters. Has to be of length `N`.
 - `lower::Vector{Float64}`: Lower boundary of the fit parameters. Has to be of length `N`.
 - `upper::Vector{Float64}`: upper boundary of the fit parameters. Has to be of length `N`.
-- `intensity_eval_function::Function = x -> abs.(x ./ maximum(x)).^(1/2),` a function that is applied to 
-  both the simulated and experimental spectrum before calculating the residuals. The default represents
-  a fitting of the normalized sqaure-root of the CARS-intensity.
+- `weights::Union{Spectrum, Nothing}=nothing`: weights used for weighted least squares (formular: `residuals = weights .* (I_exp - I_sim).^2`).
+  For absolute uncertainties, the weights represent w=1/σ^2 where σ is standard deviation of the measured intensity. 
+- `absolute_sigma`::Bool`: If `true`, then the weights (sigmas) are used to give absolute uncertainties. Otherwise, 
+  sigma is scaled to match the sample variance between the fitted and experimenal spectral.
 - `solver::Symbol`: Options are `:LM` for LevenbergMarquardt and `:IPOPT` for the IPOPT solver.
 - `maxiters::Int64`: Maximum number of iterations
 - `compute_uncertainties`::Bool = true: Mostly an option to disable for cases is which the SVD throws an error. 
+- `tolerance::Float64 = 1e-5`: Tolerance that is passed to the solver.
 
 # return 
 - `FitResult`: contains parameters, spectra, uncertainties etc...
@@ -97,19 +98,19 @@ function fit_spectrum(;
     initial::Vector{Float64}, 
     lower::Vector{Float64}, 
     upper::Vector{Float64}, 
-    intensity_eval_function::Function = x -> abs.(x ./ maximum(x)).^(1/2),
     parameter_scaling_factors = initial,
     solver::Symbol = :IPOPT,
     maxiters::Int64 = 200,
-    compute_uncertainties = true
+    compute_uncertainties = true,
+    weights::Union{Spectrum, Nothing} = nothing,
+    absolute_sigma = false,
+    tolerance::Float64 = 1e-5,
 )
     # copy to not modify the users sim struct
     sim_fit = deepcopy(sim)
     auxiliary_parameters = []
 
     if solver == :LM
-        #levenberg_parameter_transform(u) = @. (upper-lower)/2 * tanh(u) + (lower+upper)/2   
-        #inv_levenberg_parameter_transform(u) = @. atanh((2*u - (upper + lower)) / (upper - lower))
         levenberg_parameter_transform(u) = @. lower + (upper-lower) * (atan(u)/π + 0.5)
         inv_levenberg_parameter_transform(u) = @. tan(π * ((u - lower) / (upper - lower) - 0.5))
 
@@ -117,13 +118,14 @@ function fit_spectrum(;
             sim_fit, 
             levenberg_parameter_transform(u), 
             spec_exp, 
-            intensity_eval_function, 
-            parameter_update_function!
+            parameter_update_function!,
+            weights,
+            #transform = x -> sqrt(abs(x))
         )
 
         prob = NonlinearLeastSquaresProblem(levenberg_residual, inv_levenberg_parameter_transform(initial))
         solver = LevenbergMarquardt(autodiff = ADTypes.AutoFiniteDiff())
-        optimal_parameters = solve(prob, solver, abstol = 0.1, reltol = 0.100, maxiters = maxiters).u
+        optimal_parameters = solve(prob, solver, abstol = tolerance, reltol = tolerance, maxiters = maxiters).u
         optimal_parameters = levenberg_parameter_transform(optimal_parameters)
     end
 
@@ -135,8 +137,9 @@ function fit_spectrum(;
             sim_fit, 
             denormalize_parmeters(u), 
             spec_exp, 
-            intensity_eval_function, 
-            parameter_update_function!
+            parameter_update_function!,
+            weights,
+            #transform = x -> sqrt(abs(x))
         )
 
         optf = SciMLBase.OptimizationFunction(
@@ -154,8 +157,8 @@ function fit_spectrum(;
 
         opt = IpoptOptimizer(
             hessian_approximation = "limited-memory", 
-            acceptable_tol        = 1e-3,
-            acceptable_iter       = 2, # number of iterations after solution is acceptable
+            acceptable_tol        = tolerance,
+            acceptable_iter       = 4, # number of iterations after solution is acceptable
             mu_strategy           = "monotone"
         )
 
@@ -168,8 +171,10 @@ function fit_spectrum(;
             sim_fit, 
             optimal_parameters, 
             spec_exp, 
-            intensity_eval_function, 
-            parameter_update_function!
+            parameter_update_function!,
+            weights,
+            absolute_sigma,
+            true
         )    
     else 
         param_uncertainties = zeros(length(optimal_parameters))
@@ -183,34 +188,56 @@ function fit_spectrum(;
         sim_fit,
         spec_exp,
         parameter_update_function!,
-        intensity_eval_function
+        weights
     )
 
     return result
 end
 
 
-function residuals(sim, param, spec_exp, intensity_eval_function, update_function!)
+function residuals(sim, param, spec_exp::Spectrum, update_function!, weights::Union{Spectrum, Nothing}; transform::Function = x -> identity(x))
+    # transform() is applied to help the solver consider peaks that may be too small by applying the sqrt()
+    # to the spectra. Experimentally, I found that it works better to not apply the transform to the weights
+    # when calculating the uncertainties, transform(x)=identity(x), so the ucnertainties are not
+    # falsified
+    
+    # update sim to new parameters
     update_function!(sim, param)
+    # get updated simulated spectrum
     spec_sim = simulate_spectrum(sim, wavenumbers(spec_exp))
-    I_sim = intensity_eval_function(spec_sim.I)
-    I_exp = intensity_eval_function(spec_exp.I)
+    I_sim    = intensities(spec_sim, normalization = :maximum)
 
+    # normalize exp data and weights which should be 1/sigma^2, together
+    norm_exp = 1/maximum(intensities(spec_exp))
+    I_exp    = norm_exp .* intensities(spec_exp)
+
+    I_exp = transform.(I_exp)
+    I_sim = transform.(I_sim)
+
+    # apply transformation function. sqrt for better fitting and identity for the uncertainties
     r = I_exp .- I_sim
-    return r
+
+    if isnothing(weights)
+        return r
+    else
+        σ = norm_exp .* 1 ./ sqrt.(abs.(intensities(weights)))
+        #σ = transform.(σ)
+        r_weighted = r ./ σ
+        return r_weighted
+    end
 end
 
-function uncertainties(sim_, optimal_params, spec_exp, intensity_eval_function, parameter_update_function!, use_svd = true)        
+function uncertainties(sim_, optimal_params, spec_exp, parameter_update_function!, weights::Union{Spectrum, Nothing}, absolute_sigma = false, use_svd = true)        
     sim = deepcopy(sim_)
     parameter_update_function!(sim, optimal_params)
     # estimate variance of data
-    r  = residuals(sim, optimal_params, spec_exp, intensity_eval_function, parameter_update_function!)
+    r  = residuals(sim, optimal_params, spec_exp, parameter_update_function!, weights)
     N  = length(wavenumbers(spec_exp))
     p  = length(optimal_params)
     σ² = sum(r .^ 2) / (N - p)
 
     # get local jacobian
-    res(param) = residuals(sim, param, spec_exp, intensity_eval_function, parameter_update_function!)
+    res(param) = residuals(sim, param, spec_exp, parameter_update_function!, weights)
     J          = FiniteDiff.finite_difference_jacobian(res, optimal_params)
 
     if use_svd
@@ -223,11 +250,17 @@ function uncertainties(sim_, optimal_params, spec_exp, intensity_eval_function, 
         idx        = s .> threshold
         s          = s[idx]
         Vt         = Vt[idx, :]
+        V          = V[:,idx]
 
         #J_reconstructed = U * (Diagonal(s) * Vt)
-        pcov = σ² .* (V * Diagonal(1.0 ./ s.^2)) * Vt
+        pcov = (V * Diagonal(1.0 ./ s.^2)) * Vt
     else
-        pcov = σ² .* inv(transpose(J) * J)
+        pcov = inv(transpose(J) * J)
+    end
+
+    if absolute_sigma == false || isnothing(weights)
+        # if the weights given dont reflect absolute uncertainties
+        pcov .*= σ²
     end
 
     uncertainties = sqrt.(diag(pcov))

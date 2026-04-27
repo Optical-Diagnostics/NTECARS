@@ -8,7 +8,7 @@ Constructs an `N2Species` and generates the transition database.
 - `molar_fraction::Float64`: Molar fraction of N₂ in the gas mixture.
 - `distribution::N2Distribution`: Rovibrational population distribution, such as
   [`N2.MultiTemperatureDistribution`](@ref), [`N2.FreeVibrationalDistribution`](@ref),
-  [`N2.TwoTemperatureDistribution`](@ref).
+  [`N2.TwoPopulationDistribution`](@ref).
 - `v_max::Int`: Maximum vibrational quantum number used to truncate the transition 
   database.
 - `J_max::Int`: Maximum rotational quantum number in the transition database.

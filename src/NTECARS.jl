@@ -42,6 +42,7 @@ module NTECARS
     include(joinpath("fitting", "serialization", "save_results.jl"))
 
     include(joinpath("plotting", "spectrum_comparison.jl"))
+    include(joinpath("serialization", "spectrum.jl"))
 
     export GasConditions, LaserConfiguration, InstrumentConfiguration, Spectrum, N2, CO2, 
     CARSSimulator, simulate_spectrum, Spectrum, wavelengths, wavenumbers, intensities,
@@ -49,7 +50,7 @@ module NTECARS
     fit_spectrum, N2Species, CO2Species, raman_shifts, voigt_profile, voigt_super_profile, 
     gaussian_profile, voigt_asymmetric_profile, save_fit_results, spectra_compariso_with_residual,
     cut_spectral_range, total_susceptibility, DeltaProfile, FlatProfile, normalize_by_stokes_intensity!,
-    Gaussian, Voigt, PowerVoigt, FitResult
+    Gaussian, Voigt, PowerVoigt, FitResult, save_spectrum
 end
 
 
