@@ -73,18 +73,23 @@ end
 ##################################################
 #               Broanening profiles
 ##################################################
-function power_voigt_spectrum(σ, γ, n, μ=0.0)
-    threshold = 1e-6
-    if voigt_super(1000.0, σ, γ, n) < threshold
-        # find where profile decreases to less than 0.001% of the maximum
-        ν_max = find_zero(x -> voigt_super(x, σ, γ, n) - threshold, (0.0, 1000.0))
-    else
-        ν_max = 100
-    end
+function find_threshold_crossing(profile_function, threshold)
+    crossing_point = find_zero(x -> profile_function(x) / profile_function(0.0) - threshold, (0, 1e30))
+    return crossing_point
+end
+
+function power_voigt_spectrum(σ, γ, n, μ=0.0, points_in_FWHM = 20)
+    profile = x -> voigt_super(x, σ, γ, n)
+
+    FWHM  = 2*find_threshold_crossing(profile, 0.5)
+    ν_max = minimum([100, find_threshold_crossing(profile, 1e-6)])
+    ν_max = maximum([ν_max, 10])
+    N     = Int64(round(ν_max / FWHM * points_in_FWHM))
 
     # calculate spectrum in the determined range
-    ν     = collect(LinRange(-ν_max, ν_max, 500))
+    ν     = collect(LinRange(-ν_max, ν_max, N))
     I     = voigt_super.(ν, σ, γ, n)
+
     return Spectrum(ν .+ μ, I, :wavenumber)
 end
 

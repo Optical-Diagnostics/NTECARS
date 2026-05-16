@@ -35,7 +35,7 @@ struct MultiTemperatureDistribution <: N2Distribution
     Q    ::AbstractFloat             # total partition sum (vib + rot)
     Q_rot::AbstractFloat            # rotational partition sum
 
-    function MultiTemperatureDistribution(;T_vib::AbstractFloat, T_rot::AbstractFloat, vib_states = N2.vib_states(10))
+    function MultiTemperatureDistribution(;T_vib::AbstractFloat, T_rot::AbstractFloat, vib_states = N2.vib_states(16))
         Q_rot = rot_partition_sum(T_rot)
         Q     = sum(Boltzmann_factor(s.E_vib, T_vib) * Q_rot for s in vib_states)
         return new(T_vib, T_rot, Q, Q_rot)

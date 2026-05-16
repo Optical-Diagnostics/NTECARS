@@ -39,6 +39,8 @@ struct FitResult
     experimental_spectrum::Spectrum
     parameter_update_function!::Function
     weights::Union{Nothing, Spectrum}
+    pcov::Matrix{Float64}
+    reduced_chi2::Float64
 end
 
 """
@@ -167,7 +169,7 @@ function fit_spectrum(;
     end
 
     if compute_uncertainties
-        param_uncertainties = uncertainties(
+        param_uncertainties, pcov, χ² = uncertainties(
             sim_fit, 
             optimal_parameters, 
             spec_exp, 
@@ -177,7 +179,10 @@ function fit_spectrum(;
             true
         )    
     else 
-        param_uncertainties = zeros(length(optimal_parameters))
+        Ni = length(optimal_parameters)
+        param_uncertainties = zeros(Ni)
+        pcov = zeros(Ni, Ni)
+        χ² = 0
     end
 
     result = FitResult(
@@ -188,7 +193,9 @@ function fit_spectrum(;
         sim_fit,
         spec_exp,
         parameter_update_function!,
-        weights
+        weights,
+        pcov,
+        χ²
     )
 
     return result
@@ -234,7 +241,7 @@ function uncertainties(sim_, optimal_params, spec_exp, parameter_update_function
     r  = residuals(sim, optimal_params, spec_exp, parameter_update_function!, weights)
     N  = length(wavenumbers(spec_exp))
     p  = length(optimal_params)
-    σ² = sum(r .^ 2) / (N - p)
+    σ² = sum(r .^ 2) / (N - p) # reduced chi-squared
 
     # get local jacobian
     res(param) = residuals(sim, param, spec_exp, parameter_update_function!, weights)
@@ -264,5 +271,6 @@ function uncertainties(sim_, optimal_params, spec_exp, parameter_update_function
     end
 
     uncertainties = sqrt.(diag(pcov))
-    return uncertainties
+    χ² = σ²
+    return uncertainties, pcov, χ²
 end

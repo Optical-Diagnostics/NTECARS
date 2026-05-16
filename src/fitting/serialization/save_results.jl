@@ -21,6 +21,9 @@ and rovibrational populations for each species.
   resolution, which is typically finer than the experimental grid.
 - `fit_parameters.csv`: Fitted parameter values with absolute and relative
   uncertainties (%) for each parameter.
+- `covariance_matrix.csv`: The covaraince matrix of the fit. If `absolute_chi=false`,
+  the covariance matrix was rescaled with the redced chi squared.
+- `reduced_chi2.csv`: The value of the reduced chi squared.
 - `CO2_rovibrational_populations/`: Created if a `CO2Species` is present in
   `result.sim.species`. Contains one CSV per vibrational state with rotational
   populations `[CO2(v,J)]/[CO2]` and their uncertainties, plus a summary
@@ -116,6 +119,18 @@ function save_fit_results(folderpath, result::FitResult, parameter_labels = ["fi
     df = DataFrame(field_values, field_names)
     save_path = joinpath(folderpath, "fit_parameters.csv")
     CSV.write(save_path, df)
+
+    #####################################################################################################
+    #                            covariance matrix and reduced reduced_chi2
+    ##################################################################################################### 
+    df = DataFrame(result.pcov, :auto)
+    save_path = joinpath(folderpath, "covariance_matrix.csv")
+    CSV.write(save_path, df)
+
+    df = DataFrame([[result.reduced_chi2]], ["reduced chi squared"])
+    save_path = joinpath(folderpath, "reduced_chi2.csv")
+    CSV.write(save_path, df)
+
 
     #####################################################################################################
     #                                     rovibrational_populations
