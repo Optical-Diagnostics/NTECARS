@@ -19,7 +19,7 @@ Stores the complete result of a [`fit_spectrum`](@ref) call.
   Stored to allow serialization and later re-evaluation of the result.
 - `parameter_update_function!::Function`: The update function used during fitting.
   Stored to allow re-simulation or re-fitting from the result.
-- `weights::Function`: The weights used for weighted least-squares
+- `weights::Union{Spectrum, Nothing}`: The weights used for weighted least-squares
 
 # Notes
 - `fitted_spectrum` and `fitted_spectrum_at_measurement` differ only in their
@@ -46,7 +46,7 @@ end
 """
     fit_spectrum(; spec_exp, sim, parameter_update_function!, initial, lower, upper, 
         intensity_eval_function = x -> abs.(x ./ maximum(x)).^(1/2) , parameter_scaling_factor = initial,
-        solver::Symbol = :LM, maxiters= 200, compute_uncertainties = true) -> FitResult
+        solver::Symbol = :IPOPT, maxiters= 200, compute_uncertainties = true) -> FitResult
 
 Fits the the model to a measured spectrum and returns a collection of results in a [`FitResult`](@ref).
 
@@ -58,9 +58,9 @@ Fits the the model to a measured spectrum and returns a collection of results in
 - `initial::Vector{Float64}`: Initial values of the fit parameters. Has to be of length `N`.
 - `lower::Vector{Float64}`: Lower boundary of the fit parameters. Has to be of length `N`.
 - `upper::Vector{Float64}`: upper boundary of the fit parameters. Has to be of length `N`.
-- `weights::Union{Spectrum, Nothing}=nothing`: weights used for weighted least squares (formular: `residuals = weights .* (I_exp - I_sim).^2`).
-  For absolute uncertainties, the weights represent w=1/σ^2 where σ is standard deviation of the measured intensity. 
-- `absolute_sigma`::Bool`: If `true`, then the weights (sigmas) are used to give absolute uncertainties. Otherwise, 
+- `weights::Union{Spectrum, Nothing}=nothing`: weights used for weighted least squares (formulr: `residuals = weights .* (I_exp - I_sim).^2`).
+  For absolute uncertainties, the weights have to represent w=1/σ^2 where σ is standard deviation of the measured intensity. 
+- `absolute_sigma`::Bool`: If `true`, then the weights (sigmas) alone are used to give absolute uncertainties. If `False`, 
   sigma is scaled to match the sample variance between the fitted and experimenal spectral.
 - `solver::Symbol`: Options are `:LM` for LevenbergMarquardt and `:IPOPT` for the IPOPT solver.
 - `maxiters::Int64`: Maximum number of iterations
@@ -108,72 +108,65 @@ function fit_spectrum(;
     absolute_sigma = false,
     tolerance::Float64 = 1e-5,
 )
-    # copy to not modify the users sim struct
-    sim_fit = deepcopy(sim)
-    auxiliary_parameters = []
+    # During fit, scale exp to be of order one for residuals to be well behaved
+    sim = deepcopy(sim)
+
+    # update function that additionally adds a scaling factor to match signal strength from exp
+    parameter_update_function!(sim, initial)
+    max_I_sim_initial = maximum(intensities(simulate_spectrum(sim)))
+    max_I_exp_initial = maximum(intensities(spec_exp))
+    scaling_parameter_initial = sim.scaling_factor * max_I_exp_initial / max_I_sim_initial
+
+    initial_scaled = [initial..., scaling_parameter_initial]
+    lower_scaled   = [lower..., 0.01 * scaling_parameter_initial]
+    upper_scaled   = [upper..., 100 * scaling_parameter_initial]
+
+    function update_function_with_scaling!(sim, param)
+        scaling_factor = param[end]
+        sim.scaling_factor = scaling_factor
+        parameter_update_function!(sim, param[1:end-1])
+    end
 
     if solver == :LM
-        levenberg_parameter_transform(u) = @. lower + (upper-lower) * (atan(u)/π + 0.5)
-        inv_levenberg_parameter_transform(u) = @. tan(π * ((u - lower) / (upper - lower) - 0.5))
-
-        levenberg_residual(u, p) = residuals(
-            sim_fit, 
-            levenberg_parameter_transform(u), 
-            spec_exp, 
-            parameter_update_function!,
-            weights,
-            #transform = x -> sqrt(abs(x))
+        optimal_parameters = fit_with_LevenbergMarquardt(;
+            spec_exp  = spec_exp,
+            sim       = sim, 
+            initial   = initial_scaled, 
+            lower     = lower_scaled,
+            upper     = upper_scaled,
+            maxiters  = maxiters,
+            weights   = weights,
+            tolerance = tolerance,
+            parameter_update_function! = update_function_with_scaling!,
         )
-
-        prob = NonlinearLeastSquaresProblem(levenberg_residual, inv_levenberg_parameter_transform(initial))
-        solver = LevenbergMarquardt(autodiff = ADTypes.AutoFiniteDiff())
-        optimal_parameters = solve(prob, solver, abstol = tolerance, reltol = tolerance, maxiters = maxiters).u
-        optimal_parameters = levenberg_parameter_transform(optimal_parameters)
     end
 
     if solver == :IPOPT
-        normalize_parmeters(u) = @. u / parameter_scaling_factors
-        denormalize_parmeters(u) = @. u * parameter_scaling_factors
-        
-        Ipopt_residual(u, p) = residuals(
-            sim_fit, 
-            denormalize_parmeters(u), 
-            spec_exp, 
-            parameter_update_function!,
-            weights,
-            #transform = x -> sqrt(abs(x))
-        )
+        parameter_scaling_factors = [parameter_scaling_factors..., scaling_parameter_initial]
 
-        optf = SciMLBase.OptimizationFunction(
-            (u,p) -> sum(abs2.(Ipopt_residual(u,p))), 
-            ADTypes.AutoFiniteDiff()
+        optimal_parameters = fit_with_IPOPT(;
+            spec_exp  = spec_exp,
+            sim       = sim, 
+            initial   = initial_scaled, 
+            lower     = lower_scaled,
+            upper     = upper_scaled,
+            maxiters  = maxiters,
+            weights   = weights,
+            tolerance = tolerance,
+            parameter_update_function! = update_function_with_scaling!,
+            parameter_scaling_factors  = parameter_scaling_factors
         )
-
-        prob = SciMLBase.OptimizationProblem(
-            optf, 
-            normalize_parmeters(initial), 
-            auxiliary_parameters, 
-            lb = normalize_parmeters(lower), 
-            ub = normalize_parmeters(upper)
-        )
-
-        opt = IpoptOptimizer(
-            hessian_approximation = "limited-memory", 
-            acceptable_tol        = tolerance,
-            acceptable_iter       = 4, # number of iterations after solution is acceptable
-            mu_strategy           = "monotone"
-        )
-
-        optimal_parameters = solve(prob, opt, maxiters = maxiters).u # scaling back to physical dimenions
-        optimal_parameters = denormalize_parmeters(optimal_parameters)
     end
+
+    #optimal_parameters[end] *= norm # scaling factor is scaled back to physical dimensions
+    update_function_with_scaling!(sim, optimal_parameters)
 
     if compute_uncertainties
         param_uncertainties, pcov, χ² = uncertainties(
-            sim_fit, 
+            sim, 
             optimal_parameters, 
             spec_exp, 
-            parameter_update_function!,
+            update_function_with_scaling!,
             weights,
             absolute_sigma,
             true
@@ -186,11 +179,11 @@ function fit_spectrum(;
     end
 
     result = FitResult(
-        optimal_parameters, 
-        param_uncertainties, 
-        simulate_spectrum(sim_fit),
-        simulate_spectrum(sim_fit, wavenumbers(spec_exp)),
-        sim_fit,
+        optimal_parameters[1:end-1], 
+        param_uncertainties[1:end-1], 
+        simulate_spectrum(sim),
+        simulate_spectrum(sim, wavenumbers(spec_exp)),
+        sim,
         spec_exp,
         parameter_update_function!,
         weights,
@@ -201,22 +194,107 @@ function fit_spectrum(;
     return result
 end
 
+function fit_with_IPOPT(;
+    spec_exp::Spectrum,
+    sim::CARSSimulator, 
+    parameter_update_function!::Function, 
+    initial::Vector{Float64}, 
+    lower::Vector{Float64}, 
+    upper::Vector{Float64}, 
+    parameter_scaling_factors = initial,
+    maxiters::Int64 = 200,
+    weights::Union{Spectrum, Nothing} = nothing,
+    tolerance::Float64 = 1e-5,
+)
+
+    # copy to not edit the input sim
+    sim = deepcopy(sim)
+
+    # to get the fit parameters to be of order one
+    normalize_parmeters(u) = @. u / parameter_scaling_factors
+    denormalize_parmeters(u) = @. u * parameter_scaling_factors
+    
+    Ipopt_residual(u, p) = residuals(
+        sim, 
+        denormalize_parmeters(u), 
+        spec_exp, 
+        parameter_update_function!,
+        weights,
+        transform = isnothing(weights) ? x -> sqrt(abs(x)) : x -> identity(x)
+    )
+
+    optf = SciMLBase.OptimizationFunction(
+        (u,p) -> sum(abs2.(Ipopt_residual(u,p))), 
+        ADTypes.AutoFiniteDiff()
+    )
+
+    auxiliary_parameters = []
+    prob = SciMLBase.OptimizationProblem(
+        optf, 
+        normalize_parmeters(initial), 
+        auxiliary_parameters, 
+        lb = normalize_parmeters(lower), 
+        ub = normalize_parmeters(upper)
+    )
+
+    opt = IpoptOptimizer(
+        hessian_approximation = "limited-memory", 
+        acceptable_tol        = tolerance,
+        acceptable_iter       = 4, # number of iterations after solution is acceptable
+        mu_strategy           = "adaptive",
+    )
+
+    optimal_parameters = solve(prob, opt, maxiters = maxiters).u # scaling back to physical dimenions
+    optimal_parameters = denormalize_parmeters(optimal_parameters)
+    return optimal_parameters
+end
+
+function fit_with_LevenbergMarquardt(;
+    spec_exp::Spectrum,
+    sim::CARSSimulator, 
+    parameter_update_function!::Function, 
+    initial::Vector{Float64}, 
+    lower::Vector{Float64}, 
+    upper::Vector{Float64}, 
+    maxiters::Int64 = 200,
+    weights::Union{Spectrum, Nothing} = nothing,
+    tolerance::Float64 = 1e-5,
+)
+
+    # copy to not edit the input sim
+    sim = deepcopy(sim)
+
+    # tranformation to constrict the fit parameters to the given limits
+    levenberg_parameter_transform(u) = @. lower + (upper-lower) * (atan(u)/π + 0.5)
+    inv_levenberg_parameter_transform(u) = @. tan(π * ((u - lower) / (upper - lower) - 0.5))
+
+    levenberg_residual(u, p) = residuals(
+        sim, 
+        levenberg_parameter_transform(u), 
+        spec_exp, 
+        parameter_update_function!,
+        weights,
+        transform = isnothing(weights) ? x -> sqrt(abs(x)) : x -> identity(x)
+    )
+
+    prob = NonlinearLeastSquaresProblem(levenberg_residual, inv_levenberg_parameter_transform(initial))
+    solver = LevenbergMarquardt(autodiff = ADTypes.AutoFiniteDiff())
+    optimal_parameters = solve(prob, solver, abstol = tolerance, reltol = tolerance, maxiters = maxiters).u
+    optimal_parameters = levenberg_parameter_transform(optimal_parameters)
+    return optimal_parameters
+end
 
 function residuals(sim, param, spec_exp::Spectrum, update_function!, weights::Union{Spectrum, Nothing}; transform::Function = x -> identity(x))
     # transform() is applied to help the solver consider peaks that may be too small by applying the sqrt()
-    # to the spectra. Experimentally, I found that it works better to not apply the transform to the weights
-    # when calculating the uncertainties, transform(x)=identity(x), so the ucnertainties are not
+    # to the spectra. During uncertainty calculation transform(x) = identity(x), so the ucnertainties are not
     # falsified
     
     # update sim to new parameters
     update_function!(sim, param)
     # get updated simulated spectrum
     spec_sim = simulate_spectrum(sim, wavenumbers(spec_exp))
-    I_sim    = intensities(spec_sim, normalization = :maximum)
-
-    # normalize exp data and weights which should be 1/sigma^2, together
-    norm_exp = 1/maximum(intensities(spec_exp))
-    I_exp    = norm_exp .* intensities(spec_exp)
+    I_sim    = intensities(spec_sim)
+    I_exp    = intensities(spec_exp)
 
     I_exp = transform.(I_exp)
     I_sim = transform.(I_sim)
@@ -227,8 +305,7 @@ function residuals(sim, param, spec_exp::Spectrum, update_function!, weights::Un
     if isnothing(weights)
         return r
     else
-        σ = norm_exp .* 1 ./ sqrt.(abs.(intensities(weights)))
-        #σ = transform.(σ)
+        σ =  1 ./ sqrt.(abs.(intensities(weights)))
         r_weighted = r ./ σ
         return r_weighted
     end

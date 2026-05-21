@@ -43,7 +43,6 @@ synthetic_spectrum = simulate_spectrum(sim)
 #                                      FITTING
 ######################################################################################
 function update_function!(sim::CARSSimulator, param)
-    println(param)
     T_12, T_3, T_N2vib, T_rot, CO2_frac = param
     
     # update translational temperature
@@ -68,12 +67,13 @@ end
     lower        = [0.0, 0.0, 0.0, 0.0, 0.0],
     upper        = [3000.0, 3000.0, 3000.0, 3000.0, 0.2],
     parameter_update_function! = update_function!,
-    solver       = :LM
+    solver       = :IPOPT, 
 )
 
 ######################################################################################
 #                                      PLOTTING
 ######################################################################################
+println(result.param)
 using CairoMakie
 with_theme(theme_latexfonts()) do
     fig = Figure(size = (800, 600), fontsize = 40, figure_padding = 30)

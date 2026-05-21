@@ -15,7 +15,7 @@ function simulate_spectrum(sim::CARSSimulator, ν_output = nothing)
         χ² = average_to_detector_pixels(χ², ν_output)
     end
 
-    χ².I = intensities(χ², normalization = :maximum)
+    χ².I = intensities(χ²) .* 1e100 .* sim.scaling_factor
     χ².I .+= sim.vertical_shift
     return χ²
 end

@@ -40,7 +40,7 @@ sim  = CARSSimulator(
 ###############################################################
 #                     Calculate spectrum
 ###############################################################
-@pprof chi2 = simulate_spectrum(sim)
+chi2 = simulate_spectrum(sim)
 
 ###############################################################
 #                          Plotting
@@ -48,11 +48,11 @@ sim  = CARSSimulator(
 with_theme(theme_latexfonts()) do
     fig = Figure(size = (1000, 700), fontsize = 40, figure_padding = 30)
     ax = Axis(fig[1,1], 
-        limits = ((494, 499), (-0.02, 1.1)),
+        limits = ((494, 499), nothing),
         xlabel = L"$\mathrm{λ_{aS} \, (nm)}$",
         ylabel = L"$\mathrm{(CARS \, intensity)^{1/2}}$"
     )
-    I_sqrt_normalized = sqrt.(chi2.I ./ maximum(chi2.I))
+    I_sqrt_normalized = sqrt.(chi2.I ./ 1)
     lines!(ax, wavelengths(chi2) .* 1e9, I_sqrt_normalized, color = :black)
     fig
 end

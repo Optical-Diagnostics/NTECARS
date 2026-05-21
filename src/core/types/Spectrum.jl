@@ -63,6 +63,8 @@ Base.conj(s::Spectrum) = Spectrum(wavenumbers(s), conj.(intensities(s)), :wavenu
 Base.sqrt(s::Spectrum) = Spectrum(wavenumbers(s), sqrt.(intensities(s)), :wavenumber)
 Base.real(s::Spectrum) = Spectrum(wavenumbers(s), real.(intensities(s)), :wavenumber)
 Base.:+(s::Spectrum, x::Real) = Spectrum(wavenumbers(s), intensities(s) .+ x, :wavenumber)
+Base.:*(s::Spectrum, x::Real) = Spectrum(wavenumbers(s), intensities(s) .* x, :wavenumber)
+
 
 function +(s1::Spectrum, s2::Spectrum)
     if wavenumbers(s1) == wavenumbers(s2)

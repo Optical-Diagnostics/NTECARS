@@ -41,8 +41,7 @@ synthetic_spectrum = simulate_spectrum(sim)
 nothing #hide
 ```
 
-In NTECARS, to fit a set of parameters, an update function has to be defined which updates the `CARSSimulator` from an array of parameters
-such as 
+Now, the parameters that should be fitted have to be specified. In NTECARS, this is done by defining an update function that takes an array of parameters and updates the `CARSSimulator` from this array. This function is given to the solver. For this example, we will fit the fraction of CO2 in the gas `CO2_frac`, and the vibrational populations of CO2 and N2 using their respective `MultiTemperatureDistribution`. In total this corresponds to 5 fit parameters. The update function for this case is:
 ```@example fit
 function update_function!(sim::CARSSimulator, param)
     T_12, T_3, T_N2vib, T_rot, CO2_frac = param
@@ -75,9 +74,33 @@ result = fit_spectrum(;
 )
 result.param
 ```
+The NTECARS code then fits the model to the experiment. To match the arbitrary amplitude of the experimental data in the fitting process, the simulated spectrum is scaled by a constant that is automatically fitted together with the rest of the parameters. This approach was chosen over the initial approach used in the paper in which both experiment and simulation were normalized to their respective maximum, since the fitted scaling parameter leads to more stable results.
 
 The fitted parameters, spectra and rovibrational populations together with their uncertainties can be saved using
-
 ```Julia
 save_fit_results(folder_path, result)
 ```
+
+## Weighted fitting
+If the spectrum covers a large dynamic range with weak lines, a weighted least squares fitting has to be performed since the contribution of weak lines to the residual that is minimized is otherwise to small for the solver. For this, weights can be passed to the solver as well in the form a `Spectrum` that should be defined at the same points as the experimentally measured intensities. In the calculation fo the residual, the weights are applied as `w[i] * (I_exp[i]-I_sim[i])^2`.
+
+For minimizing the relative intensity differences between the model and the experiment rather than absolute differences, the weight has to correspond to `1/I^2`. The weighted fit is then performed by calling:
+```@example fit
+weights = Spectrum(wavenumbers(synthetic_spectrum), 1 ./ intensities(synthetic_spectrum).^2, :wavenumber)
+
+result = fit_spectrum(;
+    spec_exp     = synthetic_spectrum,
+    sim          = sim, 
+    weights      = weights,
+    initial      = [500.0, 500.0, 500.0, 500.0, 0.1], 
+    lower        = [0.0, 0.0, 0.0, 0.0, 0.0],
+    upper        = [3000.0, 3000.0, 3000.0, 3000.0, 1.0],
+    parameter_update_function! = update_function!
+)
+nothing #hide
+```
+
+## Uncertainties
+The NTECARS code can also calculate uncertainties for the fitted parameters and vibrational populations. If no uncertainties are provided in the form of weights, then the uncertainties are simply calculated from the Jacobian of the variance between the experimental data and the fit. If weights are supplied, then the weighted variance is used for the calculation of uncertainties. 
+
+To calculate absolute uncertainties, the weights have to correspond to the inverse square of the uncertainty of the intensity e.g. w = 1/sigma^2. Furthermore, `fit_spectrum` has to be given the argument `absolute_sigma = true`. Setting `absolute_sigma = false` scales the uncertainties to yield a reduced chi-squared of unity. If the reduced chi-squared, which is also saved by `save_fit_results`, deviates from unity, the `absolute_sigma = false` option is likely more appropriate.

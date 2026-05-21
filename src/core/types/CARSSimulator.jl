@@ -10,7 +10,7 @@ Constructs a `CARSSimulator` containing all information required to simulate a C
 - `lasers::LaserConfiguration`: Laser wavelengths and spectral profiles.
 - `instrument::InstrumentConfiguration`: Instrumental broadening profile.
 - `grid_type::Symbol`: Can be `:adaptive` or `:uniform`.
-- `vertical_shift::Float64`: Vertical offset added after the specturm is normalized to its maximum.
+- `vertical_shift::Float64`: Vertical offset added after the specturm calculated.
 - `wavelength_shift::Float64`: Horizontal shift of the anti-Stokes wavelength axis in
   meters, i.e. the output is evaluated at `λ_aS + wavelength_shift`. Used to account
   for calibration offsets.
@@ -23,6 +23,8 @@ Constructs a `CARSSimulator` containing all information required to simulate a C
 - `grid::Union{UniformGrid, AdaptiveGrid}`: Spectral grid.
 - `vertical_shift::Float64`: Vertical offset of the normalised spectrum.
 - `wavelength_shift::Float64`: Horizontal wavelength shift in meters.
+- `scaling_factor::Float64`: scaling factor that gets applied to the spectrum. This is factor is automatically
+  determined during the fitting procedure and does not have to modified by the user.
 
 # Notes
 - The spectral grid is constructed once at initialisation. If `conditions`, `species`,
@@ -37,6 +39,7 @@ mutable struct CARSSimulator
     grid      ::Union{UniformGrid, AdaptiveGrid}
     vertical_shift::Float64
     wavelength_shift::Float64
+    scaling_factor::Float64
 
     function CARSSimulator(;
         species   ::Vector{T},
@@ -54,7 +57,7 @@ mutable struct CARSSimulator
             grid = UniformGrid(species = species, lasers = lasers, conditions = conditions)
         end
 
-        new(species, conditions, lasers, instrument, grid, vertical_shift, wavelength_shift)
+        new(species, conditions, lasers, instrument, grid, vertical_shift, wavelength_shift, 1)
     end
 end
 

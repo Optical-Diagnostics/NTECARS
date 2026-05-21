@@ -14,12 +14,10 @@ to both lasers, and intensity columns.
 - `anti-Stokes wavelength (nm)`: Anti-Stokes wavelength axis in nm.
 - `Raman shift (cm⁻¹) [ω₁ - ωₛ]`: Raman shift relative to the first laser in cm⁻¹.
 - `Raman shift (cm⁻¹) [ω₂ - ωₛ]`: Raman shift relative to the second laser in cm⁻¹.
-- `intensity (a.u.)`: Normalised CARS intensity.
-- `sqrt(intensity) (a.u.)`: Square root of the normalised CARS intensity.
+- `intensity (a.u.)`: CARS intensity.
+- `sqrt(intensity) (a.u.)`: Square root of the CARS intensity.
 
 # Notes
-- The spectrum is normalised to its maximum value before saving, so intensities
-  are in the range [0, 1].
 - Prints the output path to the console upon successful completion.
 
 # Examples
