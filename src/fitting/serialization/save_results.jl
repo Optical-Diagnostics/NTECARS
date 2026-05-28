@@ -47,7 +47,7 @@ save_fit_results("results/measurement_01", result,
     ["T_12 (K)", "T_3 (K)", "T_N2vib (K)", "T_rot (K)", "CO2 molar fraction"])
 ```
 """
-function save_fit_results(folderpath, result::FitResult, parameter_labels = ["scaling factor",["fit param $(i)" for i in eachindex(result.param[2:end])]...])
+function save_fit_results(folderpath, result::FitResult, parameter_labels = ["fit param $(i)" for i in eachindex(result.param[1:end])])
     # create folder structure for given folderpath if it doesnt exist
     mkpath(folderpath) 
     
