@@ -2,7 +2,7 @@
 
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://optical-diagnostics.github.io/NTECARS/dev/)
 
-NTECARS is julia package for calculating and fitting dual-pump coherent anti-Stokes Raman scattering spectra under non-equilibrium conditions. A companion paper is currently being submitted. The code allows for a flexible modeling of the rovibrational distribution functions using either multi-temperature models or vibrational-distribution-free fitting. Convolutions with laser profiles and instrumental profiles are implemented.
+NTECARS is julia package for calculating and fitting dual-pump coherent anti-Stokes Raman scattering spectra under non-equilibrium conditions. A companion paper is currently being submitted. The code allows for a flexible modeling of the rovibrational distribution functions using either multi-temperature models or vibrational-distribution-free fitting. Convolutions with laser profiles and instrumental profiles are implemented. Physical details and validation examples can be found in the published companion paper "NTECARS: A Nonthermal Equilibrium CARS Spectra Fitting Code" (http://doi.org/10.1002/jrs.70184 )
 
 ## Installation
 ```julia
